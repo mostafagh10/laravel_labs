@@ -1,7 +1,8 @@
 @extends('layouts.app')
 @section('content')
     <div class="container mt-5">
-        <h1>All Posts</h1>
+        <h1>email : {{$user->email}}</h1>
+        <h2>{{$user->name}} Posts</h2>
         <div class="row">
             @foreach ($posts as $post)
                 <div class="col-md-4 mb-4">

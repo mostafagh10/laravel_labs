@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Post;
 use App\Models\User;
 
@@ -9,23 +10,14 @@ use Illuminate\Http\Request;
 
 class PostController extends Controller
 {
-    //
 
-    private $posts = [
-        ['id' => 1, 'title' => 'First Post', 'body' => 'This is the body of the first post.', 'image' => 'post.jpg'],
-        ['id' => 2, 'title' => 'Second Post', 'body' => 'This is the body of the second post.', 'image' => 'post2.jpeg'],
-        ['id' => 3, 'title' => 'Third Post', 'body' => 'This is the body of the third post.', 'image' => 'post.jpg'],
-        ['id' => 4, 'title' => 'Fourth Post', 'body' => 'This is the body of the fourth post.', 'image' => 'post2.jpeg'],
-    ];
+    public function __construct(){
+        $this->middleware('auth');
+    }
 
     public function index()
     {
-        // return view('index', ["posts" => $this->posts]);
-        //---------------------------------------------------------
-        // $posts = DB::table('posts')->get();
-        // return $posts;
-        //--------------------------------------------------------
-        $posts = Post::paginate(18); // Assuming 10 posts per page
+        $posts = Post::paginate(18); 
     return view('index', compact('posts'));
 
         
@@ -33,11 +25,6 @@ class PostController extends Controller
 
     public function show($id)
     {
-        // $post = $this->findPost($id);
-        // if ($post) {
-        //     return view('show', ["post" => $post]);
-        // }
-        // return abort(404);
         $post = Post::find($id);
         if($post){
             return view('show', ["post" => $post]);
@@ -62,6 +49,14 @@ class PostController extends Controller
         return view('create',['users' => $users]);
     }
 
+    public function showprofile()
+    {
+        $userId = Auth::id();
+        $user = User::find($userId);
+        $posts = Post::where('creator', $userId)->paginate(10);
+        return view('profile',['user' => $user,'posts'=>$posts]);
+    }
+
     public function store(){
         $request_parms = request();
         $file_path = $this->file_operation($request_parms);
@@ -70,7 +65,7 @@ class PostController extends Controller
         $post = new Post();
         $post->title = $request_parms['title'];
         $post->body = $request_parms['body'];
-        $post->creator = $request_parms['creator'];
+        $post->creator = Auth::id();
         $post->image = $file_path;
         $post->save();
         //-------------------------
@@ -80,12 +75,17 @@ class PostController extends Controller
 
     public function edit($id)
     {
-        $post = Post::find($id);
-        $users = User::all();
-        if($post){
-            return view('edit', ["post" => $post,"users"=>$users]);
+
+            $post = Post::find($id);
+            if(Auth::id()==$post->creator){
+            $users = User::all();
+            if($post){
+                return view('edit', ["post" => $post,"users"=>$users]);
+            }else{
+                return abort(404);
+            }
         }else{
-            return abort(404);
+            return abort(401);
         }
     }
 
@@ -109,14 +109,17 @@ class PostController extends Controller
 
     public function destroy($id)
     {
-        // $post = $this->findPost($id);
         $post = Post::find($id);
+        if(Auth::id()==$post->creator){
         if ($post) {
             $post->delete();
             $posts = Post::paginate(18); // Assuming 10 posts per page
     return view('index', compact('posts'));
         }
         return abort(404);
+     }else{
+        return abort(401);
+     }
     }
 
     // private function findPost($id)
